@@ -1,0 +1,2 @@
+# Necessary libraries to deploy and test the model on the rapsberry
+# To be filled
