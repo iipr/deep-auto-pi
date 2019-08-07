@@ -31,8 +31,8 @@ def video_2_frames(file, path='./', outpath='./', timestep=100, left_offset=0, m
     try:
         storage = hdf5_file.get_node('/' + grp_name)
     except tables.NoSuchNodeError:
-        # dtype is uint8 (unsigned integer 0-255)
-        img_dtype = tables.UInt8Atom()
+        # dtype is Float32 (we will saved values in [0, 1])
+        img_dtype = tables.Float32Atom()
         data_shape = (0, 300, 300, 3)
         chunkshape=(1, 300, 300, 3)
         storage = hdf5_file.create_earray('/', grp_name, img_dtype, shape=data_shape, 
@@ -57,8 +57,8 @@ def video_2_frames(file, path='./', outpath='./', timestep=100, left_offset=0, m
             # Transformations: flip around both axes and resize
             # https://docs.opencv.org/2.4/modules/core/doc/operations_on_arrays.html#flip
             frame = cv2.resize(cv2.flip(frame, -1), (300, 300), interpolation=cv2.INTER_CUBIC)
-            # Save into HDF5 file
-            storage.append(np.expand_dims(frame, 0))
+            # Normalize and save into HDF5 file
+            storage.append(np.expand_dims(frame.astype(np.float32) / 255., 0))
         # If we are done, release and finish
         # Also if we surpassed the end of the video
         if frame_count >= max_frames or not ret:
