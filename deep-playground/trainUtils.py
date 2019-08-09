@@ -10,20 +10,21 @@ class HistoryCallback(Callback):
     Expected arguments:
        - (self, (epoch|batch), logs={})
     '''
-    def __init__(self, mod_name):
+    def __init__(self, mod_name, log_file='logs'):
         self.mod_name = mod_name
+        self.log_file = log_file
     
     def on_train_begin(self, logs={}):
         self.epochs = []
         self.logs = []
         self.times = []
         now = time.strftime('%A, %d %b %Y %H:%M:%S', time.gmtime(time.time() + 3600 * 2))
-        with open('../data/models/a_logs.txt', 'a+') as f_log:
+        with open('../data/models/{}.txt'.format(self.log_file), 'a+') as f_log:
             f_log.write('\n\nStarting to train model {} on {}...'.format(self.mod_name, now))
         
     def on_epoch_begin(self, epoch, logs={}):
         self.init_time = time.time()
-        with open('../data/models/a_logs.txt', 'a+') as f_log:
+        with open('../data/models/{}.txt'.format(self.log_file), 'a+') as f_log:
             f_log.write('\nStarting epoch {}...'.format(epoch))
 
     def on_epoch_end(self, epoch, logs={}):
@@ -31,7 +32,7 @@ class HistoryCallback(Callback):
         self.epochs.append(epoch)
         self.logs.append(logs)
         self.times.append(end_time)
-        with open('../data/models/a_logs.txt', 'a+') as f_log:
+        with open('../data/models/{}.txt'.format(self.log_file), 'a+') as f_log:
             f_log.write('\nIt took {}s'.format(end_time))
          
     def on_train_end(self, logs={}):
