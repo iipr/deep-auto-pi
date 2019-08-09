@@ -1,6 +1,49 @@
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, time
 from keras.utils import Sequence
+from keras.callbacks import Callback
 
+
+class HistoryCallback(Callback):
+    '''
+    Optional functions to define can be:
+       - on_(epoch|batch|train)_(begin|end)
+    Expected arguments:
+       - (self, (epoch|batch), logs={})
+    '''
+    def __init__(self, mod_name):
+        self.mod_name = mod_name
+    
+    def on_train_begin(self, logs={}):
+        self.epochs = []
+        self.logs = []
+        self.times = []
+        now = time.strftime('%A, %d %b %Y %H:%M:%S', time.gmtime(time.time() + 3600 * 2))
+        with open('../data/models/a_logs.txt', 'a+') as f_log:
+            f_log.write('\n\nStarting to train model {} on {}...'.format(self.mod_name, now))
+        
+    def on_epoch_begin(self, epoch, logs={}):
+        self.init_time = time.time()
+        with open('../data/models/a_logs.txt', 'a+') as f_log:
+            f_log.write('\nStarting epoch {}...'.format(epoch))
+
+    def on_epoch_end(self, epoch, logs={}):
+        end_time = round(time.time() - self.init_time)
+        self.epochs.append(epoch)
+        self.logs.append(logs)
+        self.times.append(end_time)
+        with open('../data/models/a_logs.txt', 'a+') as f_log:
+            f_log.write('\nIt took {}s'.format(end_time))
+         
+    def on_train_end(self, logs={}):
+        hist = pd.DataFrame()
+        hist['epoch'] = self.epochs
+        hist['duration [s]'] = self.times
+        # Iterate on log keys (typically: loss, val_loss...)
+        for col in self.logs[0].keys():
+            hist[col] = [log[col] for log in self.logs]
+        hist.set_index('epoch').to_csv('../data/models/{}_hist.csv'.format(self.mod_name), index=True)
+      
+    
 class DataGenerator(Sequence):
     '''
     Data generator for Keras (fit_generator). Based on:
