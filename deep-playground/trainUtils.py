@@ -16,7 +16,7 @@ class HistoryCallback(Callback):
     
     def on_train_begin(self, logs={}):
         self.epochs = []
-        self.logs = []
+        self.log_list = []
         self.times = []
         now = time.strftime('%A, %d %b %Y %H:%M:%S', time.gmtime(time.time() + 3600 * 2))
         with open('../data/models/{}.txt'.format(self.log_file), 'a+') as f_log:
@@ -30,7 +30,7 @@ class HistoryCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         end_time = round(time.time() - self.init_time)
         self.epochs.append(epoch)
-        self.logs.append(logs)
+        self.log_list.append(logs.copy())
         self.times.append(end_time)
         with open('../data/models/{}.txt'.format(self.log_file), 'a+') as f_log:
             f_log.write('\nIt took {}s'.format(end_time))
@@ -40,8 +40,8 @@ class HistoryCallback(Callback):
         hist['epoch'] = self.epochs
         hist['duration [s]'] = self.times
         # Iterate on log keys (typically: loss, val_loss...)
-        for col in self.logs[0].keys():
-            hist[col] = [log[col] for log in self.logs]
+        for col in self.log_list[0].keys():
+            hist[col] = [log[col] for log in self.log_list]
         hist.set_index('epoch').to_csv('../data/models/{}_hist.csv'.format(self.mod_name), index=True)
       
     
