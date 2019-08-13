@@ -5,6 +5,7 @@ from importlib import reload
 from trainUtils import HistoryCallback, DataGenerator
 import modelUtils
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 
 #################################################
@@ -139,7 +140,7 @@ def prepare_training(models):
 #                  TESTING                      #
 #################################################
 
-def plot_loss(model, mod_name):
+def loss_plot(model, mod_name):
     # Load history file
     hist = pd.read_csv('../data/models/{}/{}_hist.csv'.format(mod_name, mod_name))
     days = hist['duration [s]'].sum() // (24 * 3600)
@@ -153,11 +154,13 @@ def plot_loss(model, mod_name):
     axs[0].legend(['val_mean_absolute_error', 'mean_absolute_error'], fontsize=12)
     axs[0].set_title('Mean Absolute Error', fontsize=15)
     axs[0].set_yscale('log')
+    axs[0].grid()
     axs[1].plot(hist['val_loss'])
     axs[1].plot(hist['loss'])
     axs[1].legend(['val_loss', 'loss'], fontsize=12)
     axs[1].set_title('Mean Squared Error', fontsize=15)
     axs[1].set_yscale('log')
+    axs[1].grid()
     # Save resulting figure
     fig.savefig('../data/models/{}/{}_loss.png'.format(mod_name, mod_name))
     print('\n\tLoss plots saved in ../data/models/{}/{}_loss.png'.format(mod_name, mod_name))
@@ -170,13 +173,31 @@ def scatter_plot(y_true, y_pred, mod_name, unseen_shuffled=''):
     fig.set_size_inches(12, 12)
     ax.plot([0, max_val], [0, max_val], color='r')
     ax.plot(y_true, y_pred, 'g.')
+    ax.grid()
     ax.set_xlabel('True distances', fontsize=12)
     ax.set_ylabel('Predicted distances', fontsize=12)
     ax.set_title('Scatter plot of true vs predicted distances', fontsize=15)
     # Save resulting figure
     fig.savefig('../data/models/{}/{}_scatter_{}_{}.png'.format(mod_name, mod_name, unseen_shuffled, length))
-    print('\n\tScatter plots saved in ../data/models/{}/{}_scatter_{}_{}.png'.format(mod_name, mod_name, 
+    print('\n\tScatter plot saved in ../data/models/{}/{}_scatter_{}_{}.png'.format(mod_name, mod_name,
                                                                                      unseen_shuffled, length))
+
+def series_plot(y_true, y_pred, mod_name):
+    #max_val = max(max(y_true), max(y_pred)) + 5
+    length = len(y_true)
+    fig, ax = plt.subplots()
+    fig.set_size_inches(20, 10)
+    ax.plot(y_true.iloc[:, 0], y_true.iloc[:, 1], 'b-.')
+    ax.plot(y_true.iloc[:, 0], y_pred, 'g-')
+    ax.grid()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+    ax.set_xlabel('Timestamp', fontsize=12)
+    ax.set_ylabel('Distances [m]', fontsize=12)
+    ax.legend(['True', 'Predicted'], fontsize=12)
+    ax.set_title('Series plot of true and predicted distances', fontsize=15)
+    # Save resulting figure
+    fig.savefig('../data/models/{}/{}_series_{}.png'.format(mod_name, mod_name, length))
+    print('\n\tSeries plot saved in ../data/models/{}/{}_series_{}.png'.format(mod_name, mod_name, length))
 
 def test_model_unseen(model, mod_name, n_frames, shuffled):
     video = '/V0420043'
@@ -200,6 +221,8 @@ def test_model_unseen(model, mod_name, n_frames, shuffled):
     if shuffled:
         pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
     else:
+        # Possibility to compute distaces for ALL frames
+        n_frames = max_samples if n_frames == 0 else n_frames
         pred_idx = np.arange(n_frames)
     y_true = y.iloc[pred_idx, 1]
     # Generators
@@ -210,6 +233,9 @@ def test_model_unseen(model, mod_name, n_frames, shuffled):
     print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
     print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
     scatter_plot(y_true, y_pred, mod_name, unseen_shuffled='U' + ('S' if shuffled else ''))
+    if not shuffled:
+        # Plot both time series
+        series_plot(y.iloc[pred_idx, :], y_pred, mod_name)
 
 def test_model_seen(model, mod_name, n_frames):
     # Define parameters for the generator
@@ -251,7 +277,7 @@ def prepare_test(models):
         option = int(input('\n\tPlease enter your option: '))
         if option == 1:   model, mod_name = load_model(models)
         elif option == 2: model.summary()
-        elif option == 3: plot_loss(model, mod_name)
+        elif option == 3: loss_plot(model, mod_name)
         elif option == 4:
             n_frames = int(input('\n\tNumber of frames to test: '))
             shuffled = int(input('\n\tTest sequentially [1] or shuffled [2]?: ')) != 1
