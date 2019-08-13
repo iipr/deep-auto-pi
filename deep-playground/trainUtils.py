@@ -86,18 +86,17 @@ class DataGenerator(Sequence):
 
     def __getitem__(self, batch_n):
         '''Generate one batch of data'''
-        # Generate indexes of the batch
-        batch_slice = self.indexes[batch_n * self.batch_size:(batch_n+1) * self.batch_size]
-
         # Generate data
         if self.timestep == 0:
             # Normal data generation, for NN (like cnn)
+            # Generate indexes of the batch
+            batch_slice = self.indexes[batch_n * self.batch_size:(batch_n+1) * self.batch_size]
             # Find list of IDs
             list_IDs_batch = self.list_IDs[batch_slice]
             X, y = self.__data_generation(list_IDs_batch)
         else:
             # For RNNs/LSTMs/GRUs
-            X, y = self.__data_generation(np.arange(batch_slice[0], batch_slice[0] + self.timestep))
+            X, y = self.__data_generation(np.arange(batch_n, batch_n + self.timestep))
             dims = X.shape
             X = X.reshape(self.X_reshape)
             y = np.array(y.iloc[-1]).reshape((1,))
