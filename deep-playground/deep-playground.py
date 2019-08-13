@@ -230,8 +230,8 @@ def test_model_unseen(model, mod_name, n_frames, shuffled):
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
     print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
+    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true[-len(y_pred):], y_pred))))
+    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true[-len(y_pred):], y_pred))))
     scatter_plot(y_true, y_pred, mod_name, unseen_shuffled='U' + ('S' if shuffled else ''))
     if not shuffled:
         # Plot both time series
@@ -262,8 +262,8 @@ def test_model_seen(model, mod_name, n_frames):
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
     print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
+    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true[-len(y_pred):], y_pred))))
+    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true[-len(y_pred):], y_pred))))
     scatter_plot(y_true, y_pred, mod_name, unseen_shuffled='SS')
 
 def prepare_test(models):
