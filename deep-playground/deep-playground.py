@@ -218,24 +218,24 @@ def test_model_unseen(model, mod_name, n_frames, shuffled):
     with pd.HDFStore(params['files']['file_y'], mode='r') as store_y:
         y = store_y[params['files']['group_y']]
         max_samples = y.shape[0]
+    # Possibility to compute distaces for ALL frames
+    n_frames = max_samples if n_frames == 0 else n_frames
     if shuffled:
         pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
     else:
-        # Possibility to compute distaces for ALL frames
-        n_frames = max_samples if n_frames == 0 else n_frames
         pred_idx = np.arange(n_frames)
-    y_true = y.iloc[pred_idx, 1]
     # Generators
     pred_generator = DataGenerator(pred_idx, **params)
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
+    y_true = y.iloc[pred_idx[-len(y_pred):], 1]
     print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true[-len(y_pred):], y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true[-len(y_pred):], y_pred))))
+    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
+    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
     scatter_plot(y_true, y_pred, mod_name, unseen_shuffled='U' + ('S' if shuffled else ''))
     if not shuffled:
         # Plot both time series
-        series_plot(y.iloc[pred_idx, :], y_pred, mod_name)
+        series_plot(y.iloc[pred_idx[-len(y_pred):], :], y_pred, mod_name)
 
 def test_model_seen(model, mod_name, n_frames):
     # Define parameters for the generator
@@ -256,14 +256,14 @@ def test_model_seen(model, mod_name, n_frames):
         y = store_y[params['files']['group_y']]
         max_samples = y.shape[0]
     pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
-    y_true = y.iloc[pred_idx, 1]
     # Generators
     pred_generator = DataGenerator(pred_idx, **params)
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
+    y_true = y.iloc[pred_idx[-len(y_pred):], 1]
     print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true[-len(y_pred):], y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true[-len(y_pred):], y_pred))))
+    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
+    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
     scatter_plot(y_true, y_pred, mod_name, unseen_shuffled='SS')
 
 def prepare_test(models):
