@@ -47,10 +47,11 @@ class HistoryCallback(Callback):
         # Iterate on log keys (typically: loss, val_loss...)
         for col in self.log_list[0].keys():
             hist[col] = [log[col] for log in self.log_list]
-        if os.path.exists('../data/models/{}/{}_hist.csv'.format(self.mod_name, self.mod_name)):
-            prev_hist = pd.read_csv('../data/models/{}/{}_hist.csv'.format(self.mod_name, self.mod_name))
+        history_file = self.log_file.replace('.txt', '_hist.csv')
+        if os.path.exists(history_file):
+            prev_hist = pd.read_csv(history_file)
             hist = pd.concat([prev_hist, hist])
-        hist.set_index('epoch').to_csv('../data/models/{}/{}_hist.csv'.format(self.mod_name, self.mod_name), index=True)
+        hist.set_index('epoch').to_csv(history_file, index=True)
       
     
 class DataGenerator(Sequence):
