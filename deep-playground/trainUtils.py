@@ -47,7 +47,7 @@ class HistoryCallback(Callback):
         # Iterate on log keys (typically: loss, val_loss...)
         for col in self.log_list[0].keys():
             hist[col] = [log[col] for log in self.log_list]
-        history_file = self.log_file.replace('.txt', '_hist.csv')
+        history_file = self.log_file.replace('logs.txt', 'hist.csv')
         if os.path.exists(history_file):
             prev_hist = pd.read_csv(history_file)
             hist = pd.concat([prev_hist, hist])
