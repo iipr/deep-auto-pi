@@ -10,7 +10,7 @@ class HistoryCallback(Callback):
     Expected arguments:
        - (self, (epoch|batch), logs={})
     '''
-    def __init__(self, mod_name, video=None, log_file='logs'):
+    def __init__(self, mod_name, log_file, video=None):
         self.mod_name = mod_name
         self.log_file = log_file
         self.video = video
@@ -21,12 +21,12 @@ class HistoryCallback(Callback):
         self.times = []
         self.videos = []
         now = time.strftime('%A, %d %b %Y %H:%M:%S', time.gmtime(time.time() + 3600 * 2))
-        with open('../data/models/{}/{}.txt'.format(self.mod_name, self.log_file), 'a+') as f_log:
+        with open(self.log_file, 'a+') as f_log:
             f_log.write('\n\nStarting to train model {} on {}...'.format(self.mod_name, now))
         
     def on_epoch_begin(self, epoch, logs={}):
         self.init_time = time.time()
-        with open('../data/models/{}/{}.txt'.format(self.mod_name, self.log_file), 'a+') as f_log:
+        with open(self.log_file, 'a+') as f_log:
             f_log.write('\nStarting epoch {}, video {}...'.format(epoch, self.video))
 
     def on_epoch_end(self, epoch, logs={}):
@@ -35,7 +35,7 @@ class HistoryCallback(Callback):
         self.log_list.append(logs.copy())
         self.times.append(end_time)
         self.videos.append(self.video)
-        with open('../data/models/{}/{}.txt'.format(self.mod_name, self.log_file), 'a+') as f_log:
+        with open(self.log_file, 'a+') as f_log:
             f_log.write('\nIt took {}s'.format(end_time))
          
     def on_train_end(self, logs={}):
@@ -72,7 +72,7 @@ class DataGenerator(Sequence):
         self.file_y = files['file_y']
         self.group_X = files['group_X']
         self.group_y = files['group_y']
-        self.X_reshape = X_reshape
+        self.X_reshape = X_reshape if X_reshape[0] is not None else (1, *X_reshape[1:])
         self.on_epoch_end()
 
     def __len__(self):
