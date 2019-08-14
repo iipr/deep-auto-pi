@@ -9,21 +9,42 @@ import matplotlib.dates as mdates
 
 
 #################################################
+#             Global parameters                 #
+#################################################
+
+MODEL_PATH = '../data/models/'
+FRAMES = '../data/clean/car_frames_norm.h5'
+DIST = '../data/clean/car_distances_adjusted.h5'
+FRAMES_GROUP = ''
+DIST_GROUP = ''
+FRAMES_SHUFFLED = '../data/clean/car_frames_norm_shuffled.h5'
+DIST_SHUFFLED = '../data/clean/car_distances_adjusted_shuffled.h5'
+FRAMES_SHUFFLED_GROUP = '/frames'
+DIST_SHUFFLED_GROUP = '/distances'
+BATCH_SIZE = 2**5
+SHUFFLE_DATA_GEN = False
+TIMESTEP = 3 # <- for LSTMs
+TRAIN_SPLIT = 0.9
+VAL_SPLIT = 1 - TRAIN SPLIT
+UNSEEN_VID = '/V0420043'
+RNN_NAMES = ['rnn', 'lstm', 'gru']
+
+#################################################
 #                  TRAINING                     #
 #################################################
 
 def train_sequentially(model, mod_name, n_epochs):
     '''For the case of LSTMs.'''
     # Define parameters for the generator
-    params = {'batch_size': 1,
-              'shuffle': False,
+    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+              'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
-              'timestep': 10, # for LSTMs
+              'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
-                'file_X': '../data/clean/car_frames_norm.h5',
-                'file_y': '../data/clean/car_distances_adjusted.h5',
-                'group_X': '',
-                'group_y': ''
+                'file_X': FRAMES,
+                'file_y': DIST,
+                'group_X': FRAMES_GROUP,
+                'group_y': DIST_GROUP
                }
              }
     # Extract video names
@@ -37,9 +58,9 @@ def train_sequentially(model, mod_name, n_epochs):
             # Update params with the new video name
             params['files']['group_X'], params['files']['group_y'] = video, video
             # Total number of samples
-            with pd.HDFStore('../data/clean/car_distances_adjusted.h5', mode='r') as store_y:
+            with pd.HDFStore(params['files']['file_y'], mode='r') as store_y:
                 n_samples = store_y[video].shape[0]
-            train_split = 0.9
+            train_split = TRAIN_SPLIT
             # Indexes for train and validation
             train_idx = np.arange(n_samples)[0:int(n_samples * train_split)]
             val_idx = np.arange(n_samples)[int(n_samples * train_split):n_samples]
@@ -60,21 +81,22 @@ def train_sequentially(model, mod_name, n_epochs):
 def train_shuffled(model, mod_name, n_epochs):
     '''For the case of other NN (like CNNs).'''
     # Define parameters for the generator
-    params = {'batch_size': 2**5,
-              'shuffle': False,
+    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+              'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
+              'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
-                'file_X': '../data/clean/car_frames_norm_shuffled.h5',
-                'file_y': '../data/clean/car_distances_adjusted_shuffled.h5',
-                'group_X': '/frames',
-                'group_y': '/distances'
+                'file_X': FRAMES_SHUFFLED,
+                'file_y': DIST_SHUFFLED,
+                'group_X': FRAMES_SHUFFLED_GROUP,
+                'group_y': DIST_SHUFFLED_GROUP
                }
              }
 
     # Total number of samples
     with pd.HDFStore(params['files']['file_y'], mode='r') as store_y:
         n_samples = store_y[params['files']['group_y']].shape[0]
-    validation_split = 0.1
+    validation_split = VAL_SPLIT
 
     # Indexes of the validation set
     val_idx = np.random.choice(np.arange(n_samples), replace=False,
@@ -200,15 +222,15 @@ def series_plot(y_true, y_pred, mod_name):
     print('\n\tSeries plot saved in ../data/models/{}/{}_series_{}.png'.format(mod_name, mod_name, length))
 
 def test_model_unseen(model, mod_name, n_frames, shuffled):
-    video = '/V0420043'
+    video = UNSEEN_VID
     # Define parameters for the generator
-    params = {'batch_size': 2**5,
-              'shuffle': False,
+    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+              'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
-              'timestep': 10 if any(sb_str in mod_name for sb_str in ['rnn', 'lstm', 'gru']) else 0,
+              'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
-                'file_X': '../data/clean/car_frames_norm.h5',
-                'file_y': '../data/clean/car_distances_adjusted.h5',
+                'file_X': FRAMES,
+                'file_y': DIST,
                 'group_X': video,
                 'group_y': video
                }
@@ -239,15 +261,15 @@ def test_model_unseen(model, mod_name, n_frames, shuffled):
 
 def test_model_seen(model, mod_name, n_frames):
     # Define parameters for the generator
-    params = {'batch_size': 2**5,
-              'shuffle': False,
+    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+              'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
-              'timestep': 10 if any(sb_str in mod_name for sb_str in ['rnn', 'lstm', 'gru']) else 0,
+              'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
-                'file_X': '../data/clean/car_frames_norm_shuffled.h5',
-                'file_y': '../data/clean/car_distances_adjusted_shuffled.h5',
-                'group_X': '/frames',
-                'group_y': '/distances'
+                'file_X': FRAMES_SHUFFLED,
+                'file_y': DIST_SHUFFLED,
+                'group_X': FRAMES_SHUFFLED_GROUP,
+                'group_y': DIST_SHUFFLED_GROUP
                }
              }
 
@@ -296,11 +318,20 @@ def prepare_test(models):
 #              HELPER FUNCTIONS                 #
 #################################################
 
+def has_rnn_layer(model):
+    for layer in model.layers:
+        if any(sb_str in layer.name for sb_str in RNN_NAMES):
+            return True
+    return False
+
+def get_path(path, name, ext):
+    return path + name + '/' + name + '.' + ext
+
 def load_model(models):
     print()
     while True:
         mod_name = input('\tModel file name [*.h5]: ')
-        path = '../data/models/{}/{}.h5'.format(mod_name, mod_name)
+        path = '{}{}/{}.h5'.format(MODEL_PATH, mod_name, mod_name)
         if os.path.exists(path): 
         #    mod_name = path.split('/')[-1][:-3]
             break
