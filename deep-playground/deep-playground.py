@@ -6,6 +6,7 @@ from trainUtils import HistoryCallback, DataGenerator
 import modelUtils
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 
 
 #################################################
@@ -175,13 +176,15 @@ def loss_plot(mod_name):
     axs[0].plot(hist['mean_absolute_error'])
     axs[0].legend(['val_mean_absolute_error', 'mean_absolute_error'], fontsize=12)
     axs[0].set_title('Mean Absolute Error', fontsize=15)
-    axs[0].set_yscale('log')
+    #axs[0].set_yscale('log')
+    axs[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     axs[0].grid()
     axs[1].plot(hist['val_loss'])
     axs[1].plot(hist['loss'])
     axs[1].legend(['val_loss', 'loss'], fontsize=12)
     axs[1].set_title('Mean Squared Error', fontsize=15)
-    axs[1].set_yscale('log')
+    #axs[1].set_yscale('log')
+    axs[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     axs[1].grid()
     # Save resulting figure
     plt_path = get_path(MODEL_PATH, mod_name, '_loss.png')
@@ -330,7 +333,7 @@ def get_path(path, name, ext):
     return path + name + '/' + name + ext
 
 def load_model(models):
-    mod_list = [m for m in os.listdir(MODEL_PATH) if m[0] != '.' and m not in ['old', 'models.txt']]
+    mod_list = sorted([m for m in os.listdir(MODEL_PATH) if m[0] != '.' and m not in ['old', 'models.txt']])
     print('\n\tAvailable models are {}'.format(mod_list))
     while True:
         mod_name = input('\tModel file name [*.h5]: ')
