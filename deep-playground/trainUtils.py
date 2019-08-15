@@ -68,7 +68,8 @@ class DataGenerator(Sequence):
         self.n_samples = len(self.list_IDs)
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.timestep = timestep
+        self.timestep = timestep # <- for LSTMs
+        self.ts_pointer = 0      # <- for LSTMs
         self.file_X = files['file_X']
         self.file_y = files['file_y']
         self.group_X = files['group_X']
@@ -82,8 +83,10 @@ class DataGenerator(Sequence):
             # +1 if the number of samples is not % self.batch_size
             last_batch = 1 if self.n_samples % self.batch_size else 0
             return int(np.floor(self.n_samples / self.batch_size)) + last_batch
-        else:
-            return self.n_samples - self.timestep + 1
+        #else: # <- for LSTMs
+        steps = self.n_samples - self.timestep + 1
+        last_batch = 1 if steps % self.batch_size else 0
+        return int(np.floor(steps / self.batch_size)) + last_batch
 
     def __getitem__(self, batch_n):
         '''Generate one batch of data'''
@@ -97,10 +100,18 @@ class DataGenerator(Sequence):
             X, y = self.__data_generation(list_IDs_batch)
         else:
             # For RNNs/LSTMs/GRUs
-            X, y = self.__data_generation(np.arange(batch_n, batch_n + self.timestep))
-            dims = X.shape
-            X = X.reshape(self.X_reshape)
-            y = np.array(y.iloc[-1]).reshape((1,))
+            n_to_read = self.batch_size + self.timestep - 1
+            # Read chunk
+            X, y = self.__data_generation(np.arange(self.ts_pointer, self.ts_pointer + n_to_read))
+            if self.batch_size > 1:
+                # Reshape, copying slices of len = timestep
+                X_tot = np.empty((self.X_reshape))
+                for i in range(self.batch_size):
+                    X_tot[i] = X[i:i + self.timestep]
+                X = X_tot
+            y = y.iloc[-self.batch_size:]
+            # Update the timestep pointer for the next batch
+            self.ts_pointer += self.batch_size
 
         return X, y
 
