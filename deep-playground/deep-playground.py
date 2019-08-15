@@ -28,7 +28,7 @@ TIMESTEP = 3 # <- for LSTMs
 TRAIN_SPLIT = 0.9
 VAL_SPLIT = 1 - TRAIN_SPLIT
 UNSEEN_VID = '/V0420043'
-RNN_NAMES = ['rnn', 'lstm', 'gru']
+RNN_NAMES = ['rnn', 'lstm', 'gru', 'time_distributed']
 
 #################################################
 #                  TRAINING                     #
@@ -75,7 +75,7 @@ def train_sequentially(model, n_epochs):
                                 callbacks=[HistoryCallback(mod_name=model.name, video=video,
                                                            log_file=get_path(MODEL_PATH, model.name, '_logs.txt'))],
                                 use_multiprocessing=True, workers=2)
-            model.reset_states()
+            #model.reset_states()
     return model, params
 
 def train_shuffled(model, n_epochs):
