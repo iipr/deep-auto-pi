@@ -54,7 +54,7 @@ def train_sequentially(model, n_epochs):
     for epoch in range(n_epochs):
         for idx, video in enumerate(videos):
             # Leave the Tesla-Mercedes video as a test set
-            if video in ['/V0420043']:
+            if video in [UNSEEN_VID]:
                 continue
             # Update params with the new video name
             params['files']['group_X'], params['files']['group_y'] = video, video
