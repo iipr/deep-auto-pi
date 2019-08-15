@@ -85,8 +85,7 @@ class DataGenerator(Sequence):
             return int(np.floor(self.n_samples / self.batch_size)) + last_batch
         #else: # <- for LSTMs
         steps = self.n_samples - self.timestep + 1
-        last_batch = 1 if steps % self.batch_size else 0
-        return int(np.floor(steps / self.batch_size)) + last_batch
+        return int(np.floor(steps / self.batch_size))
 
     def __getitem__(self, batch_n):
         '''Generate one batch of data'''
