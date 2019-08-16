@@ -75,7 +75,7 @@ def train_sequentially(model, n_epochs):
                                 callbacks=[HistoryCallback(mod_name=model.name, video=video,
                                                            log_file=get_path(MODEL_PATH, model.name, '_logs.txt'))],
                                 use_multiprocessing=True, workers=2)
-            #model.reset_states()
+            model.reset_states()
     return model, params
 
 def train_shuffled(model, n_epochs):
