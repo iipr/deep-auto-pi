@@ -106,7 +106,7 @@ class DataGenerator(Sequence):
                 # Reshape, copying slices of len = timestep
                 X_tot = np.empty((self.X_reshape))
                 for i in range(self.batch_size):
-                    X_tot[i] = X[i:i + self.timestep]
+                    X_tot[i] = X[i:i + self.timestep].reshape(self.X_reshape[1:])
                 X = X_tot
             y = y.iloc[-self.batch_size:]
             # Update the timestep pointer for the next batch
