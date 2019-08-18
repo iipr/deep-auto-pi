@@ -74,7 +74,7 @@ class DataGenerator(Sequence):
         self.file_y = files['file_y']
         self.group_X = files['group_X']
         self.group_y = files['group_y']
-        self.X_reshape = X_reshape if X_reshape[0] is not None else (1, *X_reshape[1:])
+        self.X_reshape = X_reshape if X_reshape[0] is not None else (batch_size, *X_reshape[1:])
         self.on_epoch_end()
 
     def __len__(self):
@@ -97,6 +97,7 @@ class DataGenerator(Sequence):
             # Find list of IDs
             list_IDs_batch = self.list_IDs[batch_slice]
             X, y = self.__data_generation(list_IDs_batch)
+            #X = X.reshape(self.X_reshape)
         else:
             # For RNNs/LSTMs/GRUs
             n_to_read = self.batch_size + self.timestep - 1
@@ -108,6 +109,8 @@ class DataGenerator(Sequence):
                 for i in range(self.batch_size):
                     X_tot[i] = X[i:i + self.timestep].reshape(self.X_reshape[1:])
                 X = X_tot
+            else:
+                X = X.reshape(self.X_reshape)
             y = y.iloc[-self.batch_size:]
             # Update the timestep pointer for the next batch
             self.ts_pointer += self.batch_size
