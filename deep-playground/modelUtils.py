@@ -96,11 +96,14 @@ class Models():
     def __lstm(self):
         # np.prod((300, 300, 3)) == 270000
         model = models.Sequential()
-        model.add(layers.recurrent.LSTM(units=1, stateful=True, batch_size=1,
-                                        input_shape=(10, 270000),
+        model.add(layers.recurrent.LSTM(units=1, stateful=True, batch_size=50,
+                                        input_shape=(3, 270000),
                                         dropout=0.3, return_sequences=True))
+        model.add(layers.BatchNormalization())
         model.add(layers.recurrent.LSTM(units=128, stateful=True, dropout=0.3))
+        model.add(layers.BatchNormalization())
         model.add(layers.Dense(units=512, activation='linear'))
+        model.add(layers.Dropout(0.4))
         model.add(layers.LeakyReLU(alpha=0.3))
         model.add(layers.Dense(units=64, activation='linear'))
         model.add(layers.LeakyReLU(alpha=0.3))
@@ -182,7 +185,7 @@ class Models():
         self.__compile_model(model)
         return model
 
-    def __cnn_gru():
+    def __cnn_gru(self):
         model = models.Sequential()
         model.add(TimeDistributed(layers.Conv2D(32, (3, 3), activation='linear'), batch_size=50,
                                   input_shape=(3, 300, 300, 3)))
