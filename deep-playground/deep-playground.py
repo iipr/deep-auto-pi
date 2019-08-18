@@ -23,6 +23,7 @@ DIST_SHUFFLED = '../data/clean/car_distances_adjusted_shuffled.h5'
 FRAMES_SHUFFLED_GROUP = '/frames'
 DIST_SHUFFLED_GROUP = '/distances'
 BATCH_SIZE = 2**5
+BATCH_SIZE_TS = 50
 SHUFFLE_DATA_GEN = False
 TIMESTEP = 3 # <- for LSTMs
 TRAIN_SPLIT = 0.9
@@ -37,7 +38,7 @@ RNN_NAMES = ['rnn', 'lstm', 'gru', 'time_distributed']
 def train_sequentially(model, n_epochs):
     '''For the case of LSTMs.'''
     # Define parameters for the generator
-    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+    params = {'batch_size': BATCH_SIZE_TS if has_rnn_layer(model) else BATCH_SIZE,
               'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
@@ -81,7 +82,7 @@ def train_sequentially(model, n_epochs):
 def train_shuffled(model, n_epochs):
     '''For the case of other NN (like CNNs).'''
     # Define parameters for the generator
-    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+    params = {'batch_size': BATCH_SIZE_TS if has_rnn_layer(model) else BATCH_SIZE,
               'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
@@ -224,10 +225,9 @@ def series_plot(y_true, y_pred, mod_name):
     fig.savefig(plt_path)
     print('\n\tSeries plot saved in {}'.format(plt_path))
 
-def test_model_unseen(model, n_frames, shuffled):
-    video = UNSEEN_VID
+def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
     # Define parameters for the generator
-    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+    params = {'batch_size': BATCH_SIZE_TS if has_rnn_layer(model) else BATCH_SIZE,
               'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
@@ -247,25 +247,26 @@ def test_model_unseen(model, n_frames, shuffled):
     n_frames = max_samples if n_frames == 0 else n_frames
     if shuffled:
         pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
+        y_true = y.iloc[pred_idx, 1]
     else:
         pred_idx = np.arange(n_frames)
-    # Generators
+        start = params['timestep'] - 1
+        end = start + n_frames - (n_frames % params['batch_size'])
+        y_true = y.iloc[start:end, 1]
+    # Generator
     pred_generator = DataGenerator(pred_idx, **params)
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
-    # Adjust y_true to take last n values for the case of LSTMs
-    y_true = y.iloc[pred_idx[-len(y_pred):], 1]
     print('\n\tResults on the evaluated frames:')
     print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
     print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
     scatter_plot(y_true, y_pred, model.name, unseen_shuffled='U' + ('S' if shuffled else ''))
-    if not shuffled:
-        # Plot both time series
+    if not shuffled: # Plot both time series
         series_plot(y.iloc[pred_idx[-len(y_pred):], :], y_pred, model.name)
 
-def test_model_seen(model, n_frames):
+def test_shuffled_frames(model, n_frames):
     # Define parameters for the generator
-    params = {'batch_size': 1 if has_rnn_layer(model) else BATCH_SIZE,
+    params = {'batch_size': BATCH_SIZE_TS if has_rnn_layer(model) else BATCH_SIZE,
               'shuffle': SHUFFLE_DATA_GEN,
               'X_reshape': model.layers[0].input_shape,
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
@@ -282,12 +283,11 @@ def test_model_seen(model, n_frames):
         y = store_y[params['files']['group_y']]
     max_samples = y.shape[0]
     pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
-    # Generators
+    y_true = y.iloc[pred_idx, 1]
+    # Generator
     pred_generator = DataGenerator(pred_idx, **params)
     y_pred = model.predict_generator(pred_generator, verbose=1,
                                      use_multiprocessing=True, workers=2).ravel()
-    # Adjust y_true to take last n values for the case of LSTMs
-    y_true = y.iloc[pred_idx[-len(y_pred):], 1]
     print('\n\tResults on the evaluated frames:')
     print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
     print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
@@ -298,20 +298,22 @@ def prepare_test(models):
         print('\n\t1. Load existing model.')
         print('\t2. Check model summary.')
         print('\t3. Plot model loss and metrics.')
-        print('\t4. Test on unseen frames ({}).'.format(UNSEEN_VID))
-        print('\t5. Test on seen random frames.')
+        print('\t4. Test on single video.')
+        print('\t5. Test on (random) seen frames.')
         print('\t6. Back to menu.')
         option = int(input('\n\tPlease enter your option: '))
         if option == 1:   model = load_model(models)
         elif option == 2: model.summary()
         elif option == 3: loss_plot(model.name)
         elif option == 4:
+            video = input('\n\tTest on unseen video [{}] or introduce video name: '.format(UNSEEN_VID))
+            video = UNSEEN_VID if video == '' else '/' + video
             n_frames = int(input('\n\tNumber of frames to test: '))
             shuffled = int(input('\n\tTest sequentially [1] or shuffled [2]?: ')) != 1
-            test_model_unseen(model, n_frames, shuffled)
+            test_single_video(model, n_frames, shuffled, video=video)
         elif option == 5:
             n_frames = int(input('\n\tNumber of (random) frames to test: '))
-            test_model_seen(model, n_frames)
+            test_shuffled_frames(model, n_frames)
         elif option == 6: break
         else:
             print('\n\tInvalid option!')
@@ -341,7 +343,7 @@ def load_model(models):
         if os.path.exists(mod_path):
             break
         else:
-            print('\n\tWrong file name! -> {}'.format(path))
+            print('\n\tWrong file name! -> {}'.format(mod_path))
     do_compile = input('\n\tCompile model? [y/n]: ')
     model = models.load_model(mod_path, True if do_compile == 'y' else False)
     return model
