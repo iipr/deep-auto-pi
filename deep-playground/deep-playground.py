@@ -192,7 +192,7 @@ def loss_plot(mod_name):
     fig.savefig(plt_path)
     print('\n\tLoss plots saved in {}'.format(plt_path))
 
-def scatter_plot(y_true, y_pred, mod_name, unseen_shuffled=''):
+def scatter_plot(y_true, y_pred, mod_name, video=''):
     max_val = max(max(y_true), max(y_pred)) + 5
     length = len(y_true)
     fig, ax = plt.subplots()
@@ -204,7 +204,7 @@ def scatter_plot(y_true, y_pred, mod_name, unseen_shuffled=''):
     ax.set_ylabel('Predicted distances', fontsize=12)
     ax.set_title('Scatter plot of true vs predicted distances', fontsize=15)
     # Save resulting figure
-    plt_path = get_path(MODEL_PATH, mod_name, '_scatter_{}_{}.png'.format(unseen_shuffled, length))
+    plt_path = get_path(MODEL_PATH, mod_name, '_scatter_{}_{}.png'.format(video, length))
     fig.savefig(plt_path)
     print('\n\tScatter plot saved in {}'.format(plt_path))
 
@@ -248,11 +248,14 @@ def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
     if shuffled:
         pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
         y_true = y.iloc[pred_idx, 1]
-    else:
+    elif params['timestep'] > 0:
         pred_idx = np.arange(n_frames)
         start = params['timestep'] - 1
         end = start + n_frames - (n_frames % params['batch_size'])
         y_true = y.iloc[start:end, 1]
+    else:
+        pred_idx = np.arange(n_frames)
+        y_true = y.iloc[pred_idx, 1]
     # Generator
     pred_generator = DataGenerator(pred_idx, **params)
     y_pred = model.predict_generator(pred_generator, verbose=1,
@@ -260,7 +263,7 @@ def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
     print('\n\tResults on the evaluated frames:')
     print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
     print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
-    scatter_plot(y_true, y_pred, model.name, unseen_shuffled='U' + ('S' if shuffled else ''))
+    scatter_plot(y_true, y_pred, model.name, video=video[1:])
     if not shuffled: # Plot both time series
         series_plot(y.iloc[pred_idx[-len(y_pred):], :], y_pred, model.name)
 
@@ -291,7 +294,7 @@ def test_shuffled_frames(model, n_frames):
     print('\n\tResults on the evaluated frames:')
     print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
     print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
-    scatter_plot(y_true, y_pred, model.name, unseen_shuffled='SS')
+    scatter_plot(y_true, y_pred, model.name, video='seen')
 
 def prepare_test(models):
     while True:
