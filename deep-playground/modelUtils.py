@@ -13,7 +13,7 @@ class Models():
         self.loss = loss
         self.metrics = metrics
         self.lr = lr
-        self.mod_list = ['cnn', 'cnn_v1', 'lstm', 'gru',
+        self.mod_list = ['cnn', 'cnn_v1', 'lstm', 'gru', 'gru_v1',
                          'cnn_lstm', 'cnn_lstm_v1', 'cnn_gru']
 
     def get_models_list(self):
@@ -28,6 +28,8 @@ class Models():
             return self.__lstm()
         elif mod_name == 'gru':
             return self.__gru()
+        elif mod_name == 'gru_v1':
+            return self.__gru_v1()
         elif mod_name == 'cnn_lstm':
             return self.__cnn_lstm()
         elif mod_name == 'cnn_lstm_v1':
@@ -128,6 +130,21 @@ class Models():
         model.add(layers.LeakyReLU(alpha=0.3))
         model.add(layers.Dense(units=1, activation='linear'))
         model.add(layers.LeakyReLU(alpha=0.3))
+        # Compile model and return
+        self.__compile_model(model)
+        return model
+
+    def __gru_v1(self):
+        model = models.Sequential()
+        model.add(layers.recurrent.GRU(units=1, stateful=True, batch_size=50,
+                                        input_shape=(3, 270000),
+                                        dropout=0.3, return_sequences=True))
+        model.add(layers.recurrent.GRU(units=128, stateful=True, dropout=0.3))
+        model.add(layers.BatchNormalization())
+        model.add(layers.Dense(units=64, activation='linear'))
+        model.add(layers.LeakyReLU(alpha=0.2))
+        model.add(layers.Dense(units=1, activation='linear'))
+        model.add(layers.LeakyReLU(alpha=0.2))
         # Compile model and return
         self.__compile_model(model)
         return model
