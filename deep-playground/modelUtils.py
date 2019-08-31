@@ -13,7 +13,7 @@ class Models():
         self.loss = loss
         self.metrics = metrics
         self.lr = lr
-        self.mod_list = ['cnn', 'cnn_v1', 'lstm', 'gru', 'gru_v1',
+        self.mod_list = ['cnn', 'cnn_v1', 'cnn_cat', 'lstm', 'gru', 'gru_v1',
                          'cnn_lstm', 'cnn_lstm_v1', 'cnn_gru']
 
     def get_models_list(self):
@@ -24,6 +24,8 @@ class Models():
             return self.__cnn()
         elif mod_name == 'cnn_v1':
             return self.__cnn_v1()
+        elif mod_name == 'cnn_cat':
+            return self.__cnn_cat()
         elif mod_name == 'lstm':
             return self.__lstm()
         elif mod_name == 'gru':
@@ -91,6 +93,28 @@ class Models():
         model.add(layers.LeakyReLU(alpha=0.3))
         model.add(layers.Dense(1, activation='linear'))
         model.add(layers.LeakyReLU(alpha=0.3))
+        # Compile model and return
+        self.__compile_model(model)
+        return model
+
+    def __cnn_cat(self):
+        model = models.Sequential()
+        model.add(layers.Conv2D(32, (5, 5), activation='linear',
+                              input_shape=(300, 300, 3)))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.LeakyReLU(alpha=0.3))
+        model.add(layers.Conv2D(64, (3, 3), activation='linear'))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.LeakyReLU(alpha=0.3))
+        model.add(layers.Conv2D(128, (4, 4), activation='linear'))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.LeakyReLU(alpha=0.3))
+        model.add(layers.Conv2D(64, (4, 4), activation='relu'))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.Flatten())
+        model.add(layers.Dense(256, activation='linear'))
+        model.add(layers.LeakyReLU(alpha=0.3))
+        model.add(layers.Dense(12, activation='softmax'))
         # Compile model and return
         self.__compile_model(model)
         return model
