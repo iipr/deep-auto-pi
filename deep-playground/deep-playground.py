@@ -44,7 +44,7 @@ def train_sequentially(model, n_epochs):
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
                 'file_X': FRAMES,
-                'file_y': DIST,
+                'file_y': DIST.replace('.h5', '_cat.h5') if 'cat' in model.name else DIST,
                 'group_X': FRAMES_GROUP,
                 'group_y': DIST_GROUP
                }
@@ -88,7 +88,7 @@ def train_shuffled(model, n_epochs):
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
                 'file_X': FRAMES_SHUFFLED,
-                'file_y': DIST_SHUFFLED,
+                'file_y': DIST_SHUFFLED.replace('.h5', '_cat.h5') if 'cat' in model.name else DIST_SHUFFLED,
                 'group_X': FRAMES_SHUFFLED_GROUP,
                 'group_y': DIST_SHUFFLED_GROUP
                }
@@ -233,7 +233,7 @@ def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
                 'file_X': FRAMES,
-                'file_y': DIST,
+                'file_y': DIST.replace('.h5', '_cat.h5') if 'cat' in model.name else DIST,
                 'group_X': video,
                 'group_y': video
                }
@@ -275,7 +275,7 @@ def test_shuffled_frames(model, n_frames):
               'timestep': TIMESTEP if has_rnn_layer(model) else 0,
               'files' : {
                 'file_X': FRAMES_SHUFFLED,
-                'file_y': DIST_SHUFFLED,
+                'file_y': DIST_SHUFFLED.replace('.h5', '_cat.h5') if 'cat' in model.name else DIST_SHUFFLED,
                 'group_X': FRAMES_SHUFFLED_GROUP,
                 'group_y': DIST_SHUFFLED_GROUP
                }
