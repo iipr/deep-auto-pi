@@ -128,6 +128,6 @@ class DataGenerator(Sequence):
         with pd.HDFStore(self.file_X, mode='r') as store_X, \
              pd.HDFStore(self.file_y, mode='r') as store_y:
             X = store_X.get_node(self.group_X)[list_IDs_batch, :]
-            y = store_y.select(self.group_y).iloc[list_IDs_batch, 1]    
-        
+            y = store_y.select(self.group_y).iloc[list_IDs_batch, 1:]
+
         return X, y
