@@ -114,7 +114,7 @@ class Models():
         model.add(layers.Flatten())
         model.add(layers.Dense(256, activation='linear'))
         model.add(layers.LeakyReLU(alpha=0.3))
-        model.add(layers.Dense(12, activation='softmax'))
+        model.add(layers.Dense(10, activation='softmax'))
         # Compile model and return
         self.__compile_model(model)
         return model
