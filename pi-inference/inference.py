@@ -3,12 +3,13 @@ import cv2, sys, subprocess, os, time
 import numpy as np
 
 
-MODEL_PATH='../data/models/openvino/vehicle_detection/'
+MODEL_PATH='/home/pi/deep-autopi/data/models/openvino/vehicle_detection/'
 MODEL_NAME='vehicle-detection-adas-0002'
-OUT_PATH='../data/onroad/'
+OUT_PATH='/home/pi/deep-autopi/data/onroad/'
 PRED_FILE='car_predictions.npy'
+# Maximum time of inference
+MAX_TIME=1
 
- 
 def load_model():
     '''Load and prepare models'''
     #  Plugin initialization for NCS
@@ -41,17 +42,18 @@ process = subprocess.run(ready, check=True,
                          stderr=subprocess.DEVNULL)
 
 # Go!
-now = time.time()
+go = time.time()
 while(True):
     # Capture frame-by-frame, infer and save
     tic = time.time()
     ret, frame = cap.read()
+    if not ret: continue
     filename = out_path + 'frame{:04}-{}.jpg'.\
                           format(count, time.strftime("%H_%M_%S", time.gmtime(tic)))
     cv2.imwrite(filename, frame)
     # Preprocess frame
     frame = cv2.resize(frame, (w, h))
-    frame = frame.transpose((2, 0, 1))  
+    frame = frame.transpose((2, 0, 1))
     # Change data layout from HWC to CHW
     frame = frame.reshape((n, c, h, w))
     # Start synchronous inference and get inference result
@@ -67,7 +69,10 @@ while(True):
     with open(pred_path, 'ab') as pred_file:
         np.save(pred_file, arr)
     count += 1
-    if time.time() - now > 60:
+    if time.time() - go > MAX_TIME * 60:
+        chkp = ["espeak", "'One minute recorded'"]
+        process = subprocess.run(chkp, check=True,
+                                 stderr=subprocess.DEVNULL)
         break
 else:
     # When done, release the capture
