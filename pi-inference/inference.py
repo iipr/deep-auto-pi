@@ -47,7 +47,7 @@ while(True):
     # Capture frame-by-frame, infer and save
     tic = time.time()
     ret, frame = cap.read()
-    if not ret: continue
+    if not ret or frame is None: continue
     filename = out_path + 'frame{:04}-{}.jpg'.\
                           format(count, time.strftime("%H_%M_%S", time.gmtime(tic)))
     cv2.imwrite(filename, frame)
