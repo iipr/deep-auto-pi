@@ -30,6 +30,20 @@ TRAIN_SPLIT = 0.9
 VAL_SPLIT = 1 - TRAIN_SPLIT
 UNSEEN_VID = '/V0420043'
 RNN_NAMES = ['rnn', 'lstm', 'gru', 'time_distributed']
+CAT_MAP = {
+     'cat_00': 0,
+     'cat_01': 1,
+     'cat_02': 2,
+     'cat_03': 3,
+     'cat_04': 4,
+     'cat_05': 5,
+     'cat_06': 6,
+     'cat_07': 7,
+     'cat_08': 8,
+     'cat_09': 9,
+     'cat_10': 10,
+     'cat_11': 11
+}
 
 #################################################
 #                  TRAINING                     #
@@ -247,25 +261,28 @@ def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
     n_frames = max_samples if n_frames == 0 else n_frames
     if shuffled:
         pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
-        y_true = y.iloc[pred_idx, 1]
+        y_true = y.iloc[pred_idx, 1:]
     elif params['timestep'] > 0:
         pred_idx = np.arange(n_frames)
         start = params['timestep'] - 1
         end = start + n_frames - (n_frames % params['batch_size'])
-        y_true = y.iloc[start:end, 1]
+        y_true = y.iloc[start:end, 1:]
     else:
         pred_idx = np.arange(n_frames)
-        y_true = y.iloc[pred_idx, 1]
+        y_true = y.iloc[pred_idx, 1:]
     # Generator
     pred_generator = DataGenerator(pred_idx, **params)
-    y_pred = model.predict_generator(pred_generator, verbose=1,
-                                     use_multiprocessing=True, workers=2).ravel()
-    print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
-    scatter_plot(y_true, y_pred, model.name, video=video[1:])
-    if not shuffled: # Plot both time series
-        series_plot(y.iloc[pred_idx[-len(y_pred):], :], y_pred, model.name)
+    if 'cat' in model.name:
+        test_for_categories(model, pred_generator, y_true)
+    else:
+        y_pred = model.predict_generator(pred_generator, verbose=1,
+                                         use_multiprocessing=True, workers=2).ravel()
+        print('\n\tResults on the evaluated frames:')
+        print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
+        print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
+        scatter_plot(y_true, y_pred, model.name, video=video[1:])
+        if not shuffled: # Plot both time series
+            series_plot(y.iloc[pred_idx[-len(y_pred):], :], y_pred, model.name)
 
 def test_shuffled_frames(model, n_frames):
     # Define parameters for the generator
@@ -286,15 +303,30 @@ def test_shuffled_frames(model, n_frames):
         y = store_y[params['files']['group_y']]
     max_samples = y.shape[0]
     pred_idx = np.random.choice(max_samples, size=n_frames, replace=False)
-    y_true = y.iloc[pred_idx, 1]
+    y_true = y.iloc[pred_idx, 1:]
     # Generator
     pred_generator = DataGenerator(pred_idx, **params)
+    if 'cat' in model.name:
+        test_for_categories(model, pred_generator, y_true)
+    else:
+        y_pred = model.predict_generator(pred_generator, verbose=1,
+                                         use_multiprocessing=True, workers=2).ravel()
+        print('\n\tResults on the evaluated frames:')
+        print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
+        print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
+        scatter_plot(y_true, y_pred, model.name, video='seen')
+
+def test_for_categories(model, pred_generator, y_true):
     y_pred = model.predict_generator(pred_generator, verbose=1,
-                                     use_multiprocessing=True, workers=2).ravel()
-    print('\n\tResults on the evaluated frames:')
-    print('\tMSE: {}'.format(keras.backend.eval(keras.losses.mean_squared_error(y_true, y_pred))))
-    print('\tMAE: {}'.format(keras.backend.eval(keras.losses.mean_absolute_error(y_true, y_pred))))
-    scatter_plot(y_true, y_pred, model.name, video='seen')
+                                      use_multiprocessing=True, workers=2)
+    #print('\n\tWith the test set, losses are {:0.5}, and accuracy is {:0.5}'.format(loss, acc))
+    print('\n\tTop 1 accuracy: {}'.format(
+        keras.backend.eval(keras.metrics.top_k_categorical_accuracy(y_true, y_pred, k=1))))
+    print('\tTop 3 accuracy: {}'.format(
+        keras.backend.eval(keras.metrics.top_k_categorical_accuracy(y_true, y_pred, k=3))))
+    from sklearn.metrics import confusion_matrix
+    print('\tConfusion matrix:')
+    print(confusion_matrix(y_true=y_true.idxmax(axis=1).map(CAT_MAP), y_pred=y_pred.argmax(axis=1)))
 
 def prepare_test(models):
     while True:
