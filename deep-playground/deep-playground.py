@@ -4,6 +4,8 @@ import psutil, os, keras, time
 from importlib import reload
 from trainUtils import HistoryCallback, DataGenerator
 import modelUtils
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score, confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
@@ -187,39 +189,66 @@ def loss_plot(mod_name):
     # Plot loss and metrics
     fig, axs = plt.subplots(2,1)
     fig.set_size_inches(15, 10)
-    axs[0].plot(hist['val_mean_absolute_error'])
-    axs[0].plot(hist['mean_absolute_error'])
-    axs[0].legend(['val_mean_absolute_error', 'mean_absolute_error'], fontsize=12)
-    axs[0].set_title('Mean Absolute Error', fontsize=15)
+    # Define names of losses and metrics
+    loss = 'categorical_crossentropy' if 'cat' in mod_name else 'mean_squared_error'
+    metric = 'acc' if 'cat' in mod_name else 'mean_absolute_error'
+    loss_names = {
+        'mean_squared_error': 'Mean Squared Error',
+        'mean_absolute_error': 'Mean Absolute Error',
+        'acc': 'Accuracy',
+        'categorical_crossentropy': 'Categorical Crossentropy'
+    }
+    axs[0].plot(hist[metric], linewidth=1.75)
+    axs[0].plot(hist['val_' + metric], linewidth=1.75)
+    axs[0].xaxis.set_tick_params(labelsize=20)
+    axs[0].yaxis.set_tick_params(labelsize=20)
+    axs[0].legend(['Training set', 'Validation set'], fontsize=25)
+    axs[0].set_title(loss_names[metric], fontsize=30)
     #axs[0].set_yscale('log')
     axs[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     axs[0].grid()
-    axs[1].plot(hist['val_loss'])
-    axs[1].plot(hist['loss'])
-    axs[1].legend(['val_loss', 'loss'], fontsize=12)
-    axs[1].set_title('Mean Squared Error', fontsize=15)
+    axs[1].plot(hist['loss'], linewidth=1.75)
+    axs[1].plot(hist['val_loss'], linewidth=1.75)
+    axs[1].xaxis.set_tick_params(labelsize=20)
+    axs[1].yaxis.set_tick_params(labelsize=20)
+    axs[1].legend(['Training set', 'Validation set'], fontsize=25)
+    axs[1].set_title(loss_names[loss], fontsize=30)
     #axs[1].set_yscale('log')
     axs[1].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     axs[1].grid()
+    fig.tight_layout()
     # Save resulting figure
-    plt_path = get_path(MODEL_PATH, mod_name, '_loss.png')
-    fig.savefig(plt_path)
+    plt_path = get_path(MODEL_PATH, mod_name, '_loss.pdf')
+    fig.savefig(plt_path, bbox_inches='tight')
     print('\n\tLoss plots saved in {}'.format(plt_path))
 
 def scatter_plot(y_true, y_pred, mod_name, video=''):
     max_val = max(max(y_true), max(y_pred)) + 5
     length = len(y_true)
+    # Create linear regression object
+    regr = linear_model.LinearRegression()
+    # Train the model using the training sets
+    regr.fit(y_true.values.reshape(-1, 1), y_pred)
+    # Make predictions using the testing set
+    line = regr.predict(y_true.values.reshape(-1, 1))
+    # Make the plot
     fig, ax = plt.subplots()
     fig.set_size_inches(12, 12)
+    ax.plot(y_true, line, color='royalblue')
     ax.plot([0, max_val], [0, max_val], color='r')
     ax.plot(y_true, y_pred, 'g.')
     ax.grid()
-    ax.set_xlabel('True distances', fontsize=12)
-    ax.set_ylabel('Predicted distances', fontsize=12)
-    ax.set_title('Scatter plot of true vs predicted distances', fontsize=15)
+    ax.legend(['LR of True vs Predicted', 'y(x) = x', 'True vs Predicted'],
+              fontsize=25)
+    ax.set_xlabel('True distances', fontsize=30)
+    ax.xaxis.set_tick_params(labelsize=20)
+    ax.set_ylabel('Predicted distances', fontsize=30)
+    ax.yaxis.set_tick_params(labelsize=20)
+    ax.set_title('Scatter plot of true vs predicted distances\nR^2 = {:0.3}, MSE = {:0.5}'.format(
+        r2_score(y_true, y_pred), mean_squared_error(y_true, y_pred)), fontsize=30)
     # Save resulting figure
-    plt_path = get_path(MODEL_PATH, mod_name, '_scatter_{}_{}.png'.format(video, length))
-    fig.savefig(plt_path)
+    plt_path = get_path(MODEL_PATH, mod_name, '_scatter_{}_{}.pdf'.format(video, length))
+    fig.savefig(plt_path, bbox_inches='tight')
     print('\n\tScatter plot saved in {}'.format(plt_path))
 
 def series_plot(y_true, y_pred, mod_name):
@@ -230,13 +259,15 @@ def series_plot(y_true, y_pred, mod_name):
     ax.plot(y_true.iloc[:, 0], y_pred, 'g-')
     ax.grid()
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-    ax.set_xlabel('Timestamp', fontsize=12)
-    ax.set_ylabel('Distances [m]', fontsize=12)
-    ax.legend(['True', 'Predicted'], fontsize=12)
-    ax.set_title('Series plot of true and predicted distances', fontsize=15)
+    ax.set_xlabel('Timestamp', fontsize=30)
+    ax.xaxis.set_tick_params(labelsize=20)
+    ax.set_ylabel('Distances [m]', fontsize=30)
+    ax.yaxis.set_tick_params(labelsize=20)
+    ax.legend(['True', 'Predicted'], fontsize=25)
+    ax.set_title('Series plot of true and predicted distances', fontsize=30)
     # Save resulting figure
-    plt_path = get_path(MODEL_PATH, mod_name, '_series_{}.png'.format(length))
-    fig.savefig(plt_path)
+    plt_path = get_path(MODEL_PATH, mod_name, '_series_{}.pdf'.format(length))
+    fig.savefig(plt_path, bbox_inches='tight')
     print('\n\tSeries plot saved in {}'.format(plt_path))
 
 def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
@@ -275,6 +306,7 @@ def test_single_video(model, n_frames, shuffled, video=UNSEEN_VID):
     if 'cat' in model.name:
         test_for_categories(model, pred_generator, y_true)
     else:
+        y_true = y_true.iloc[:, 0]
         y_pred = model.predict_generator(pred_generator, verbose=1,
                                          use_multiprocessing=True, workers=2).ravel()
         print('\n\tResults on the evaluated frames:')
@@ -324,9 +356,50 @@ def test_for_categories(model, pred_generator, y_true):
         keras.backend.eval(keras.metrics.top_k_categorical_accuracy(y_true, y_pred, k=1))))
     print('\tTop 3 accuracy: {}'.format(
         keras.backend.eval(keras.metrics.top_k_categorical_accuracy(y_true, y_pred, k=3))))
-    from sklearn.metrics import confusion_matrix
     print('\tConfusion matrix:')
     print(confusion_matrix(y_true=y_true.idxmax(axis=1).map(CAT_MAP), y_pred=y_pred.argmax(axis=1)))
+    ROC_plot(model.name, y_true, y_pred)
+
+def ROC_plot(mod_name, y_true, y_pred):
+    # ROC curves
+    n_classes = y_true.shape[1]
+    half = n_classes // 2
+    fpr, tpr, roc_auc = {}, {}, {}
+    for c in range(n_classes):
+        fpr[c], tpr[c], _ = roc_curve(y_true.iloc[:, c], y_pred[:, c])
+        roc_auc[c] = auc(fpr[c], tpr[c])
+    fig, axs = plt.subplots(1, 2)
+    fig.set_size_inches(24, 12)
+    for c in range(n_classes):
+        ax = axs[0] if c < 5 else axs[1]
+        ax.plot(fpr[c], tpr[c])
+    axs[0].set_title('ROC curve for the first {} classes'.format(half), fontsize=25)
+    axs[0].set_xlabel('False Positive Rate', fontsize=25)
+    axs[0].xaxis.set_tick_params(labelsize=15)
+    axs[0].set_ylabel('True Positive Rate', fontsize=25)
+    axs[0].yaxis.set_tick_params(labelsize=15)
+    axs[0].legend(['Class {}, AUC = {:.03}'.format(c, roc_auc[c]) for c in range(half)],
+                  fontsize=20)
+    axs[0].plot([0, 1], [0, 1], 'k--')
+    axs[0].set_xlim([0.0, 1.0])
+    axs[0].set_ylim([0.0, 1.05])
+    axs[0].grid()
+    axs[1].set_title('ROC curve for the last {} classes'.format(half), fontsize=25)
+    axs[1].set_xlabel('False Positive Rate', fontsize=25)
+    axs[0].xaxis.set_tick_params(labelsize=15)
+    axs[1].set_ylabel('True Positive Rate', fontsize=25)
+    axs[0].yaxis.set_tick_params(labelsize=15)
+    axs[1].legend(['Class {}, AUC = {:.03}'.format(c, roc_auc[c]) for c in range(half, n_classes)],
+                  fontsize=20)
+    axs[1].plot([0, 1], [0, 1], 'k--')
+    axs[1].set_xlim([0.0, 1.0])
+    axs[1].set_ylim([0.0, 1.05])
+    axs[1].grid()
+    # Save resulting figure
+    plt_path = get_path(MODEL_PATH, mod_name, '_roc.pdf')
+    fig.savefig(plt_path, bbox_inches='tight')
+    print('\n\tROC plot saved in {}'.format(plt_path))
+
 
 def prepare_test(models):
     while True:
