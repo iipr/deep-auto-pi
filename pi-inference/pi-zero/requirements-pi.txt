@@ -4,7 +4,7 @@
 numpy==1.16.4
 h5py==2.9.0
 opencv-python==3.4.4.19
-tensorflow==1.14.0
+tensorflow==1.15.4
 
 # Not sure:
 #Cython==0.29.10
