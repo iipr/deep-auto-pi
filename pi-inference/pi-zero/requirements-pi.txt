@@ -1,7 +1,7 @@
 # Necessary libraries to deploy and test the model on the rapsberry
 # Note: We are using a Raspberri Zero W
 
-numpy==1.16.4
+numpy==1.22.0
 h5py==2.9.0
 opencv-python==3.4.4.19
 tensorflow==1.14.0
